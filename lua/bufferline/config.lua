@@ -42,6 +42,12 @@ end
 ---@return bufferline.Config
 function Config:merge(defaults)
   assert(defaults and type(defaults) == "table", "A valid config table must be passed to merge")
+
+  self.options = self.options or {}
+  local color_icons = self.options.color_icons
+  if color_icons and type(color_icons) ~= "table" then
+    self.options.color_icons = {selected=color_icons, inactive=color_icons}
+  end
   self.options = vim.tbl_deep_extend("force", defaults.options, self.options or {})
   self.highlights = vim.tbl_deep_extend("force", defaults.highlights, self.highlights or {})
   return self
@@ -55,12 +61,41 @@ local deprecations = {
   },
 }
 
+local function validate_color_icons_value(x)
+  if not x or x == true or x == "normal" then return true end
+  return false
+end
+
 ---@param options bufferline.Options
 local function validate_user_options(options)
   if not options then return end
-  for key, _ in pairs(options) do
+  for key, val in pairs(options) do
     local item = deprecations[key]
     if item then vim.schedule(function() vim.deprecate(item.name, item.alternative, item.version, "bufferline") end) end
+    if key == "color_icons" then
+      local t = type(val)
+      if t == "table" then
+        for k,v in pairs(val) do
+          if k ~= "selected" and k ~= "inactive" then
+            vim.schedule(function()
+              vim.notify("bufferline user config: Ignoring unrecognized `color_icons` key "
+                          ..  vim.fn.string(k) .. ")",
+                          vim.log.levels.WARN, {})
+            end)
+          elseif not validate_color_icons_value(v) then
+            vim.schedule(function()
+              vim.notify("bufferline user config: Invalid `color_icons."
+                          .. k .. "` value: " .. tostring(v))
+            end)
+            options.color_icons[k] = nil
+          end
+        end
+      elseif t ~= "boolean" then
+        vim.schedule(function() vim.notify("bufferline user config: Invalid `color_icons` value (type: " .. t .. "): " .. tostring(val), vim.log.levels.ERROR, {}) end)
+        options.color_icons = {selected=true, inactive=true}
+      end
+
+    end
   end
   if options.diagnostics == "nvim_lsp" and options.diagnostics_update_in_insert then
     vim.schedule(
@@ -651,7 +686,7 @@ local function get_defaults()
     truncate_names = true,
     tab_size = 18,
     max_name_length = 18,
-    color_icons = true,
+    color_icons = {selected=true, inactive=true},
     show_buffer_icons = true,
     show_buffer_close_icons = true,
     get_element_icon = nil,

@@ -43,7 +43,7 @@
 ---@field public tab_size? number
 ---@field public truncate_names? boolean
 ---@field public max_name_length? number
----@field public color_icons? boolean
+---@field public color_icons? boolean|{selected?: boolean|"'normal'", inactive?: boolean|"'normal'"}
 ---@field public show_buffer_icons? boolean
 ---@field public show_buffer_close_icons? boolean
 ---@field public show_buffer_default_icon? boolean

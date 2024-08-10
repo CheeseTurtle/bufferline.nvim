@@ -104,8 +104,23 @@ function M.set_icon_highlight(state, hls, base_hl)
   local icon_hl, parent = PREFIX .. base_hl .. state_props[1], state_props[2]
   if icon_hl_cache[icon_hl] then return icon_hl end
 
-  local color_icons = config.options.color_icons
-  local color = not color_icons and "NONE"
+  local color = vim.o.termguicolors and (parent.guifg or parent.fg)
+  if config.options.color_icons then
+    if state == visibility.SELECTED then
+      if config.options.color_icons.selected == "normal" then
+        color = "NONE"
+      elseif config.options.color_icons.selected ~= false then
+        color = nil
+      end
+    elseif config.options.color_icons.inactive == "normal" then
+      color = "NONE"
+    elseif config.options.color_icons.inactive ~= false then
+      color = nil
+    end
+  else
+    color = "NONE"
+  end
+
   local hl_colors = vim.tbl_extend("force", parent, {
     fg = color or colors.get_color({ name = base_hl, attribute = "fg" }),
     ctermfg = color or colors.get_color({ name = base_hl, attribute = "fg", cterm = true }),
